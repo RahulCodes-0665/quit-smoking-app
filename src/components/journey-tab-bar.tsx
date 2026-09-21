@@ -1,6 +1,7 @@
 import { useRouter, type Href } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Path } from 'react-native-svg';
 
 import { Brand } from '@/constants/theme';
 
@@ -67,10 +68,32 @@ function TabGlyph({ name, color }: { name: JourneyTab; color: string }) {
   }
 
   return (
-    <View style={styles.leaf}>
-      <View style={[styles.leafPad, { backgroundColor: color }]} />
-      <View style={[styles.leafStem, { backgroundColor: color }]} />
-    </View>
+    <Svg width={22} height={22} viewBox="0 0 22 22">
+      <Path
+        d="M4 10.2 11 4.2l7 6"
+        fill="none"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M6 9.8V17.5h10V9.8"
+        fill="none"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M9.2 17.5v-4.2h3.6v4.2"
+        fill="none"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
   );
 }
 
@@ -99,24 +122,6 @@ const styles = StyleSheet.create({
   labelSelected: {
     color: Brand.gold,
     fontWeight: 600,
-  },
-  leaf: {
-    width: 22,
-    height: 22,
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-  },
-  leafPad: {
-    width: 12,
-    height: 14,
-    borderRadius: 12,
-    transform: [{ rotate: '-18deg' }],
-  },
-  leafStem: {
-    width: 2,
-    height: 6,
-    marginTop: -2,
-    borderRadius: 1,
   },
   stats: {
     width: 22,
