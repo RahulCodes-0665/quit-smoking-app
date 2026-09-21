@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
     fontSize: 34,
     lineHeight: 40,
     fontWeight: 600,
-    color: Brand.ink,
+    color: Brand.gold,
   },
   hours: {
     marginTop: 6,
