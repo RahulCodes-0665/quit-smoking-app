@@ -34,6 +34,9 @@ export default function OnboardingLayout() {
       />
       <Stack.Screen name="settings" />
       <Stack.Screen name="stats" />
+      <Stack.Screen name="craving" />
+      <Stack.Screen name="breathe" />
+      <Stack.Screen name="distract" />
     </Stack>
   );
 }

@@ -1,11 +1,13 @@
+import { BottomSheetModal } from '@expo/ui/community/bottom-sheet';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
 import { JourneyTabBar } from '@/components/journey-tab-bar';
+import { LogSlipSheet } from '@/components/log-slip-sheet';
 import { Brand, Fonts, Spacing } from '@/constants/theme';
 import { fromDateKey, startOfLocalDay } from '@/lib/date-key';
 import { loadOnboardingJourney, type OnboardingJourney } from '@/lib/onboarding';
@@ -20,6 +22,7 @@ const DEFAULT_PACK_SIZE = 20;
 export default function JourneyHomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const slipSheetRef = useRef<BottomSheetModal>(null);
   const [now, setNow] = useState(() => new Date());
   const [journey, setJourney] = useState<OnboardingJourney | null>(null);
 
@@ -103,7 +106,7 @@ export default function JourneyHomeScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Craving help"
-            onPress={() => router.push('/onboarding/settings')}
+            onPress={() => router.push('/onboarding/craving')}
             style={({ pressed }) => [styles.cta, pressed && styles.pressed]}>
             <Text style={styles.ctaLabel}>Craving help</Text>
           </Pressable>
@@ -111,12 +114,14 @@ export default function JourneyHomeScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Log a slip"
+            onPress={() => slipSheetRef.current?.present()}
             style={({ pressed }) => [styles.slip, pressed && styles.pressed]}>
             <Text style={styles.slipLabel}>Log a slip</Text>
           </Pressable>
         </View>
       </View>
       <JourneyTabBar active="home" />
+      <LogSlipSheet sheetRef={slipSheetRef} />
     </View>
   );
 }
