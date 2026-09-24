@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { OnboardingCta } from '@/components/onboarding-cta';
+import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingScreen } from '@/components/onboarding-screen';
 import { SproutIcon } from '@/components/sprout-icon';
 import { Brand, Fonts, Spacing } from '@/constants/theme';
@@ -48,23 +49,26 @@ export default function ReadyScreen() {
           }}
         />
       }>
-      <View style={styles.body}>
-        <View style={styles.hero}>
-          <View style={styles.iconWell}>
-            <View style={styles.iconScale}>
-              <SproutIcon />
+      <View style={styles.screen}>
+        <OnboardingHeader progress={false} />
+        <View style={styles.body}>
+          <View style={styles.hero}>
+            <View style={styles.iconWell}>
+              <View style={styles.iconScale}>
+                <SproutIcon />
+              </View>
             </View>
+            <Text style={styles.title}>You’re ready.</Text>
+            <Text style={styles.subtitle}>A small step today can change a lot.</Text>
           </View>
-          <Text style={styles.title}>You’re ready.</Text>
-          <Text style={styles.subtitle}>A small step today can change a lot.</Text>
-        </View>
 
-        <View style={styles.card}>
-          <SummaryRow label="Goal" value={goalLabel(goal)} />
-          <View style={styles.divider} />
-          <SummaryRow label="Start" value={startLabel(start)} />
-          <View style={styles.divider} />
-          <SummaryRow label="Daily average" value={dailyLabel(dailyCigarettes)} />
+          <View style={styles.card}>
+            <SummaryRow label="Goal" value={goalLabel(goal)} />
+            <View style={styles.divider} />
+            <SummaryRow label="Start" value={startLabel(start)} />
+            <View style={styles.divider} />
+            <SummaryRow label="Daily average" value={dailyLabel(dailyCigarettes)} />
+          </View>
         </View>
       </View>
     </OnboardingScreen>
@@ -110,6 +114,9 @@ function dailyLabel(count: number | null): string {
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+  },
   body: {
     flex: 1,
     justifyContent: 'center',

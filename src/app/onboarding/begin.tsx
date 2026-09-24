@@ -8,13 +8,14 @@ import { SproutIcon } from '@/components/sprout-icon';
 import { Brand, Fonts, Spacing } from '@/constants/theme';
 import {
   addDays,
+  addMonths,
   daysBetween,
   formatMonthYear,
   formatScheduledDay,
-  formatWeekdayShort,
   fromDateKey,
   isSameLocalDay,
   startOfLocalDay,
+  startOfMonth,
   toDateKey,
 } from '@/lib/date-key';
 import {
@@ -24,19 +25,22 @@ import {
 } from '@/lib/onboarding';
 import { useSettingsEditor } from '@/lib/settings-editor';
 
-const WEEK_LENGTH = 5;
 const DEFAULT_OFFSET_DAYS = 3;
+const WEEKDAY_LABELS = Array.from({ length: 7 }, (_, index) =>
+  new Date(2024, 0, 7 + index).toLocaleDateString(undefined, { weekday: 'narrow' }),
+);
 
 export default function BeginScreen() {
   const { isEditing, ctaLabel, finish } = useSettingsEditor();
   const today = useMemo(() => startOfLocalDay(new Date()), []);
-  const weekDays = useMemo(
-    () => Array.from({ length: WEEK_LENGTH }, (_, index) => addDays(today, index + 1)),
-    [today],
-  );
+  const firstSelectableDate = useMemo(() => addDays(today, 1), [today]);
+  const earliestMonth = useMemo(() => startOfMonth(firstSelectableDate), [firstSelectableDate]);
 
   const [mode, setMode] = useState<OnboardingStartMode>('today');
   const [chosenDate, setChosenDate] = useState(() => addDays(today, DEFAULT_OFFSET_DAYS));
+  const [visibleMonth, setVisibleMonth] = useState(() =>
+    startOfMonth(addDays(today, DEFAULT_OFFSET_DAYS)),
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -47,8 +51,11 @@ export default function BeginScreen() {
       }
 
       const savedDate = fromDateKey(saved.start.dateKey);
+      const nextDate =
+        savedDate.getTime() > today.getTime() ? savedDate : addDays(today, DEFAULT_OFFSET_DAYS);
       setMode(saved.start.mode);
-      setChosenDate(isSameLocalDay(savedDate, today) ? addDays(today, DEFAULT_OFFSET_DAYS) : savedDate);
+      setChosenDate(nextDate);
+      setVisibleMonth(startOfMonth(nextDate));
     });
 
     return () => {
@@ -58,14 +65,25 @@ export default function BeginScreen() {
 
   const selectedDate = mode === 'today' ? today : chosenDate;
   const quietDays = daysBetween(today, selectedDate);
-  const monthLabel = formatMonthYear(chosenDate);
-  const visibleDays = useMemo(() => {
-    if (weekDays.some((date) => isSameLocalDay(date, chosenDate))) {
-      return weekDays;
-    }
+  const monthLabel = formatMonthYear(visibleMonth);
+  const canGoPreviousMonth = visibleMonth.getTime() > earliestMonth.getTime();
+  const canGoPreviousYear = addMonths(visibleMonth, -12).getTime() >= earliestMonth.getTime();
+  const calendarDays = useMemo(() => daysInMonthGrid(visibleMonth), [visibleMonth]);
 
-    return [chosenDate, ...weekDays].slice(0, WEEK_LENGTH);
-  }, [chosenDate, weekDays]);
+  function showMonth(month: Date) {
+    const next = startOfMonth(month);
+    if (next.getTime() < earliestMonth.getTime()) {
+      return;
+    }
+    setVisibleMonth(next);
+  }
+
+  function selectFutureDate(date: Date) {
+    if (date.getTime() < firstSelectableDate.getTime()) {
+      return;
+    }
+    setChosenDate(date);
+  }
 
   return (
     <OnboardingScreen
@@ -114,31 +132,72 @@ export default function BeginScreen() {
             <View style={styles.calendarHeader}>
               <View style={styles.calendarTitleRow}>
                 <CalendarGlyph size={14} />
-                <Text style={styles.calendarTitle}>Target Week</Text>
+                <Text style={styles.calendarTitle}>Target date</Text>
               </View>
-              <Text style={styles.monthLabel}>{monthLabel}</Text>
             </View>
 
-            <View style={styles.weekRow}>
-              {visibleDays.map((date) => {
+            <View style={styles.monthNav}>
+              <MonthNavButton
+                label="Previous year"
+                glyph="«"
+                disabled={!canGoPreviousYear}
+                onPress={() => showMonth(addMonths(visibleMonth, -12))}
+              />
+              <MonthNavButton
+                label="Previous month"
+                glyph="‹"
+                disabled={!canGoPreviousMonth}
+                onPress={() => showMonth(addMonths(visibleMonth, -1))}
+              />
+              <Text style={styles.monthLabel}>{monthLabel}</Text>
+              <MonthNavButton
+                label="Next month"
+                glyph="›"
+                onPress={() => showMonth(addMonths(visibleMonth, 1))}
+              />
+              <MonthNavButton
+                label="Next year"
+                glyph="»"
+                onPress={() => showMonth(addMonths(visibleMonth, 12))}
+              />
+            </View>
+
+            <View style={styles.weekdayRow}>
+              {WEEKDAY_LABELS.map((label, index) => (
+                <Text key={`${label}-${index}`} style={styles.weekdayLabel}>
+                  {label}
+                </Text>
+              ))}
+            </View>
+
+            <View style={styles.dayGrid}>
+              {calendarDays.map((date, index) => {
+                if (!date) {
+                  return <View key={`empty-${index}`} style={styles.dayCell} />;
+                }
+
                 const selected = isSameLocalDay(date, chosenDate);
+                const disabled = date.getTime() < firstSelectableDate.getTime();
 
                 return (
                   <Pressable
                     key={toDateKey(date)}
                     accessibilityRole="button"
-                    accessibilityState={{ selected }}
+                    accessibilityState={{ selected, disabled }}
                     accessibilityLabel={formatScheduledDay(date)}
-                    onPress={() => setChosenDate(date)}
+                    disabled={disabled}
+                    onPress={() => selectFutureDate(date)}
                     style={({ pressed }) => [
                       styles.dayCell,
-                      selected ? styles.dayCellSelected : styles.dayCellIdle,
-                      pressed && styles.pressed,
+                      selected && styles.dayCellSelected,
+                      pressed && !disabled && styles.pressed,
                     ]}>
-                    <Text style={[styles.dayWeekday, selected && styles.dayWeekdaySelected]}>
-                      {formatWeekdayShort(date)}
-                    </Text>
-                    <Text style={[styles.dayNumber, selected && styles.dayNumberSelected]}>
+                    <Text
+                      style={[
+                        styles.dayNumber,
+                        disabled && styles.dayNumberDisabled,
+                        selected && styles.dayNumberSelected,
+                      ]}>
                       {date.getDate()}
                     </Text>
                   </Pressable>
@@ -164,6 +223,49 @@ export default function BeginScreen() {
         </View>
       </ScrollView>
     </OnboardingScreen>
+  );
+}
+
+function daysInMonthGrid(month: Date): (Date | null)[] {
+  const year = month.getFullYear();
+  const monthIndex = month.getMonth();
+  const firstWeekday = new Date(year, monthIndex, 1).getDay();
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+
+  return Array.from({ length: 42 }, (_, index) => {
+    const dayNumber = index - firstWeekday + 1;
+    if (dayNumber < 1 || dayNumber > daysInMonth) {
+      return null;
+    }
+    return new Date(year, monthIndex, dayNumber);
+  });
+}
+
+function MonthNavButton({
+  label,
+  glyph,
+  disabled = false,
+  onPress,
+}: {
+  label: string;
+  glyph: string;
+  disabled?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.monthNavButton,
+        disabled && styles.monthNavDisabled,
+        pressed && !disabled && styles.pressed,
+      ]}>
+      <Text style={[styles.monthNavGlyph, disabled && styles.dayNumberDisabled]}>{glyph}</Text>
+    </Pressable>
   );
 }
 
@@ -365,47 +467,69 @@ const styles = StyleSheet.create({
     fontWeight: 700,
     color: Brand.ink,
   },
-  monthLabel: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: 500,
-    color: Brand.muted,
-  },
-  weekRow: {
+  monthNav: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
   },
-  dayCell: {
-    flex: 1,
-    minHeight: 72,
-    borderRadius: 16,
+  monthNavButton: {
+    width: 32,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
   },
-  dayCellIdle: {
-    backgroundColor: Brand.pill,
+  monthNavDisabled: {
+    opacity: 0.35,
+  },
+  monthNavGlyph: {
+    fontSize: 20,
+    lineHeight: 24,
+    fontWeight: 600,
+    color: Brand.ink,
+  },
+  monthLabel: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: 700,
+    color: Brand.ink,
+  },
+  weekdayRow: {
+    flexDirection: 'row',
+  },
+  weekdayLabel: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: 600,
+    color: Brand.muted,
+  },
+  dayGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  dayCell: {
+    width: `${100 / 7}%`,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   dayCellSelected: {
     backgroundColor: Brand.goldSelected,
   },
-  dayWeekday: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: 500,
+  dayNumber: {
+    fontSize: 16,
+    lineHeight: 20,
+    fontWeight: 600,
+    color: Brand.ink,
+  },
+  dayNumberDisabled: {
     color: Brand.muted,
   },
-  dayWeekdaySelected: {
-    color: Brand.ink,
-  },
-  dayNumber: {
-    fontSize: 18,
-    lineHeight: 22,
-    fontWeight: 700,
-    color: Brand.ink,
-  },
   dayNumberSelected: {
+    fontWeight: 700,
     color: Brand.ink,
   },
   schedule: {

@@ -1,8 +1,8 @@
 import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Path } from 'react-native-svg';
+import { Pressable, StyleSheet, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 
-import { Brand, Fonts } from '@/constants/theme';
+import { Brand } from '@/constants/theme';
 
 export function CravingSosHeader() {
   const router = useRouter();
@@ -26,20 +26,6 @@ export function CravingSosHeader() {
           />
         </Svg>
       </Pressable>
-
-      <Text style={styles.title} numberOfLines={1}>
-        Craving Emergency Sos
-      </Text>
-
-      <View style={styles.avatar} accessibilityElementsHidden>
-        <Svg width={18} height={18} viewBox="0 0 18 18">
-          <Circle cx={9} cy={6.2} r={3.1} fill={Brand.cream} />
-          <Path
-            d="M3.4 15.2c.6-3.1 2.6-4.6 5.6-4.6s5 1.5 5.6 4.6"
-            fill={Brand.cream}
-          />
-        </Svg>
-      </View>
     </View>
   );
 }
@@ -54,22 +40,6 @@ const styles = StyleSheet.create({
   backButton: {
     width: 32,
     height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    flex: 1,
-    fontFamily: Fonts.serif,
-    fontSize: 22,
-    lineHeight: 28,
-    fontWeight: 600,
-    color: Brand.ink,
-  },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Brand.gold,
     alignItems: 'center',
     justifyContent: 'center',
   },

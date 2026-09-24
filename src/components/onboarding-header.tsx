@@ -5,15 +5,21 @@ import { Brand } from '@/constants/theme';
 import { ONBOARDING_STEPS } from '@/lib/onboarding';
 
 type OnboardingHeaderProps = {
-  step: number;
+  step?: number;
   editing?: boolean;
+  progress?: boolean;
 };
 
-export function OnboardingHeader({ step, editing = false }: OnboardingHeaderProps) {
+export function OnboardingHeader({
+  step = 1,
+  editing = false,
+  progress = true,
+}: OnboardingHeaderProps) {
   const router = useRouter();
+  const showProgress = progress && !editing;
 
   return (
-    <View style={[styles.row, editing && styles.rowEditing]}>
+    <View style={[styles.row, !showProgress && styles.rowEditing]}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Go back"
@@ -23,7 +29,7 @@ export function OnboardingHeader({ step, editing = false }: OnboardingHeaderProp
         <View style={styles.chevron} />
       </Pressable>
 
-      {editing ? null : (
+      {showProgress ? (
         <View style={styles.progress}>
           <View style={styles.progressTrack} />
           <View style={styles.progressArc} />
@@ -31,7 +37,7 @@ export function OnboardingHeader({ step, editing = false }: OnboardingHeaderProp
             {step}/{ONBOARDING_STEPS}
           </Text>
         </View>
-      )}
+      ) : null}
     </View>
   );
 }

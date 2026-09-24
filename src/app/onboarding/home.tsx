@@ -4,16 +4,16 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle } from 'react-native-svg';
+import Svg, { Circle, Text as SvgText } from 'react-native-svg';
 
 import { JourneyTabBar } from '@/components/journey-tab-bar';
 import { LogSlipSheet } from '@/components/log-slip-sheet';
 import { Brand, Fonts, Spacing } from '@/constants/theme';
-import { fromDateKey, startOfLocalDay } from '@/lib/date-key';
+import { daysBetween, fromDateKey, startOfLocalDay } from '@/lib/date-key';
 import { loadOnboardingJourney, type OnboardingJourney } from '@/lib/onboarding';
 
 const RING_SIZE = 228;
-const RING_STROKE = 2.75;
+const RING_STROKE = 8;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_PACK_PRICE = 340;
 const DEFAULT_DAILY = 10;
@@ -73,17 +73,7 @@ export default function JourneyHomeScreen() {
         </View>
 
         <View style={styles.hero}>
-          <View style={styles.ringWrap}>
-            <ProgressRing progress={stats.ringProgress} />
-            <View style={styles.ringCopy} pointerEvents="none">
-              <Text style={styles.days}>
-                {stats.days} {stats.days === 1 ? 'day' : 'days'}
-              </Text>
-              <Text style={styles.hours}>
-                {stats.hours} {stats.hours === 1 ? 'hour' : 'hours'} smoke-free
-              </Text>
-            </View>
-          </View>
+          <ProgressRing progress={stats.ringProgress} days={stats.days} hours={stats.hours} />
 
           <Text style={styles.quote}>
             One craving at a time. You’re building{'\n'}a new normal.
@@ -126,25 +116,36 @@ export default function JourneyHomeScreen() {
   );
 }
 
-function ProgressRing({ progress }: { progress: number }) {
+function ProgressRing({
+  progress,
+  days,
+  hours,
+}: {
+  progress: number;
+  days: number;
+  hours: number;
+}) {
   const radius = (RING_SIZE - RING_STROKE) / 2;
   const circumference = 2 * Math.PI * radius;
   const clamped = Math.min(1, Math.max(0, progress));
   const offset = circumference * (1 - clamped);
+  const center = RING_SIZE / 2;
+  const dayLabel = `${days} ${days === 1 ? 'day' : 'days'}`;
+  const hourLabel = `${hours} ${hours === 1 ? 'hour' : 'hours'} smoke-free`;
 
   return (
     <Svg width={RING_SIZE} height={RING_SIZE}>
       <Circle
-        cx={RING_SIZE / 2}
-        cy={RING_SIZE / 2}
+        cx={center}
+        cy={center}
         r={radius}
         stroke={Brand.goldSoft}
         strokeWidth={RING_STROKE}
         fill="none"
       />
       <Circle
-        cx={RING_SIZE / 2}
-        cy={RING_SIZE / 2}
+        cx={center}
+        cy={center}
         r={radius}
         stroke={Brand.gold}
         strokeWidth={RING_STROKE}
@@ -152,8 +153,26 @@ function ProgressRing({ progress }: { progress: number }) {
         strokeDasharray={`${circumference} ${circumference}`}
         strokeDashoffset={offset}
         strokeLinecap="round"
-        transform={`rotate(-90 ${RING_SIZE / 2} ${RING_SIZE / 2})`}
+        transform={`rotate(-90 ${center} ${center})`}
       />
+      <SvgText
+        x={center}
+        y={center - 2}
+        textAnchor="middle"
+        fontSize={34}
+        fontWeight="700"
+        fill={Brand.ink}>
+        {dayLabel}
+      </SvgText>
+      <SvgText
+        x={center}
+        y={center + 22}
+        textAnchor="middle"
+        fontSize={14}
+        fontWeight="400"
+        fill={Brand.muted}>
+        {hourLabel}
+      </SvgText>
     </Svg>
   );
 }
@@ -162,8 +181,10 @@ function buildJourneyStats(journey: OnboardingJourney | null, now: Date) {
   const start = journey?.start?.dateKey
     ? fromDateKey(journey.start.dateKey)
     : startOfLocalDay(now);
-  const elapsedMs = Math.max(0, now.getTime() - start.getTime());
-  const days = Math.floor(elapsedMs / DAY_MS);
+  const startDay = startOfLocalDay(start);
+  const today = startOfLocalDay(now);
+  const elapsedMs = Math.max(0, now.getTime() - startDay.getTime());
+  const days = startDay.getTime() > today.getTime() ? 0 : daysBetween(startDay, today) + 1;
   const hours = Math.floor((elapsedMs % DAY_MS) / (60 * 60 * 1000));
   const daily = journey?.dailyCigarettes ?? DEFAULT_DAILY;
   const packSize = journey?.packSize ?? DEFAULT_PACK_SIZE;
@@ -236,34 +257,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.five,
-  },
-  ringWrap: {
-    width: RING_SIZE,
-    height: RING_SIZE,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ringCopy: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.four,
-  },
-  days: {
-    textAlign: 'center',
-    fontFamily: Fonts.serif,
-    fontSize: 34,
-    lineHeight: 40,
-    fontWeight: 600,
-    color: Brand.gold,
-  },
-  hours: {
-    marginTop: 6,
-    textAlign: 'center',
-    fontSize: 14,
-    lineHeight: 18,
-    fontWeight: 400,
-    color: Brand.muted,
   },
   quote: {
     textAlign: 'center',
