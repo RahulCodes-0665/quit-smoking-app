@@ -1,5 +1,4 @@
-import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { OnboardingCta } from '@/components/onboarding-cta';
@@ -7,7 +6,8 @@ import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingScreen } from '@/components/onboarding-screen';
 import { SproutIcon } from '@/components/sprout-icon';
 import { Brand, Fonts, Spacing } from '@/constants/theme';
-import { saveOnboardingTriggers } from '@/lib/onboarding';
+import { loadOnboardingSettings, saveOnboardingTriggers } from '@/lib/onboarding';
+import { useSettingsEditor } from '@/lib/settings-editor';
 
 const PRESETS = [
   { id: 'stress', label: 'Stress' },
@@ -20,11 +20,32 @@ const PRESETS = [
 ] as const;
 
 export default function TriggersScreen() {
-  const router = useRouter();
+  const { isEditing, ctaLabel, finish } = useSettingsEditor();
   const [selected, setSelected] = useState<string[]>([]);
   const [customLabels, setCustomLabels] = useState<string[]>([]);
   const [addingCustom, setAddingCustom] = useState(false);
   const [draft, setDraft] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    loadOnboardingSettings().then((saved) => {
+      if (cancelled || !saved.triggers) {
+        return;
+      }
+
+      const labels = saved.triggers.selected
+        .filter((id) => id.startsWith('custom:'))
+        .map((id) => id.slice('custom:'.length));
+
+      setSelected(saved.triggers.unsure ? [] : saved.triggers.selected);
+      setCustomLabels(labels);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const chips = useMemo(
     () => [
@@ -39,7 +60,7 @@ export default function TriggersScreen() {
       selected: unsure ? [] : selected,
       unsure,
     });
-    router.push('/onboarding/pack-size');
+    finish('/onboarding/pack-size');
   }
 
   function toggle(id: string) {
@@ -72,7 +93,7 @@ export default function TriggersScreen() {
       footer={
         <View style={styles.footer}>
           <OnboardingCta
-            label="Continue"
+            label={ctaLabel}
             onPress={() => {
               persist(false);
             }}
@@ -91,7 +112,7 @@ export default function TriggersScreen() {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
-        <OnboardingHeader step={5} />
+        <OnboardingHeader step={5} editing={isEditing} />
 
         <View style={styles.observation}>
           <View style={styles.observationIcon}>

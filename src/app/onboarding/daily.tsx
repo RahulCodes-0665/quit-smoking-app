@@ -1,5 +1,4 @@
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { OnboardingCta } from '@/components/onboarding-cta';
@@ -7,7 +6,8 @@ import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingScreen } from '@/components/onboarding-screen';
 import { SproutIcon } from '@/components/sprout-icon';
 import { Brand, Fonts, Spacing } from '@/constants/theme';
-import { saveOnboardingDailyCigarettes } from '@/lib/onboarding';
+import { loadOnboardingSettings, saveOnboardingDailyCigarettes } from '@/lib/onboarding';
+import { useSettingsEditor } from '@/lib/settings-editor';
 
 const DEFAULT_COUNT = 10;
 const MIN_COUNT = 1;
@@ -15,24 +15,38 @@ const MAX_COUNT = 80;
 const CIGARETTES_PER_PACK = 20;
 
 export default function DailyScreen() {
-  const router = useRouter();
+  const { isEditing, ctaLabel, finish } = useSettingsEditor();
   const [count, setCount] = useState(DEFAULT_COUNT);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    loadOnboardingSettings().then((saved) => {
+      if (!cancelled && saved.dailyCigarettes) {
+        setCount(saved.dailyCigarettes);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <OnboardingScreen
       footer={
         <View style={styles.footer}>
           <OnboardingCta
-            label="Continue"
+            label={ctaLabel}
             onPress={() => {
               void saveOnboardingDailyCigarettes(count);
-              router.push('/onboarding/triggers');
+              finish('/onboarding/triggers');
             }}
           />
           <Text style={styles.fineTune}>You can fine-tune this anytime in your journal settings</Text>
         </View>
       }>
-      <OnboardingHeader step={4} />
+      <OnboardingHeader step={4} editing={isEditing} />
 
       <Text style={styles.title}>How many cigarettes do you smoke each day?</Text>
       <Text style={styles.subtitle}>An estimate is enough. This helps shape your gentle pace.</Text>

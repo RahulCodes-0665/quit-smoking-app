@@ -6,13 +6,14 @@ import { ONBOARDING_STEPS } from '@/lib/onboarding';
 
 type OnboardingHeaderProps = {
   step: number;
+  editing?: boolean;
 };
 
-export function OnboardingHeader({ step }: OnboardingHeaderProps) {
+export function OnboardingHeader({ step, editing = false }: OnboardingHeaderProps) {
   const router = useRouter();
 
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, editing && styles.rowEditing]}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Go back"
@@ -22,13 +23,15 @@ export function OnboardingHeader({ step }: OnboardingHeaderProps) {
         <View style={styles.chevron} />
       </Pressable>
 
-      <View style={styles.progress}>
-        <View style={styles.progressTrack} />
-        <View style={styles.progressArc} />
-        <Text style={styles.progressLabel}>
-          {step}/{ONBOARDING_STEPS}
-        </Text>
-      </View>
+      {editing ? null : (
+        <View style={styles.progress}>
+          <View style={styles.progressTrack} />
+          <View style={styles.progressArc} />
+          <Text style={styles.progressLabel}>
+            {step}/{ONBOARDING_STEPS}
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -38,6 +41,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  rowEditing: {
+    justifyContent: 'flex-start',
   },
   backButton: {
     width: 36,

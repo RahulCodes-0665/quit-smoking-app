@@ -15,16 +15,17 @@ export default function OnboardingLayout() {
       }}>
       <Stack.Screen name="index" />
       <Stack.Protected guard={!isComplete}>
-        <Stack.Screen name="goal" />
-        <Stack.Screen name="begin" />
-        <Stack.Screen name="pack" />
-        <Stack.Screen name="daily" />
-        <Stack.Screen name="triggers" />
-        <Stack.Screen name="pack-size" />
-        <Stack.Screen name="reasons" />
         <Stack.Screen name="attempt" />
         <Stack.Screen name="ready" />
       </Stack.Protected>
+      <Stack.Screen name="goal" />
+      <Stack.Screen name="begin" />
+      <Stack.Screen name="pack" />
+      <Stack.Screen name="daily" />
+      <Stack.Screen name="triggers" />
+      <Stack.Screen name="pack-size" />
+      <Stack.Screen name="reasons" />
+      <Stack.Screen name="currency" />
       <Stack.Screen
         name="home"
         options={{

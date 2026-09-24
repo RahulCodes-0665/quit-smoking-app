@@ -53,14 +53,14 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: Brand.cream,
+    backgroundColor: '#FFFFFF',
   },
   screen: {
     flex: 1,
     width: '100%',
     maxWidth: 430,
     alignSelf: 'center',
-    backgroundColor: Brand.cream,
+    backgroundColor: '#FFFFFF',
   },
   wordmark: {
     textAlign: 'center',

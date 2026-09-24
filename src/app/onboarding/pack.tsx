@@ -1,12 +1,12 @@
-import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { OnboardingCta } from '@/components/onboarding-cta';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingScreen } from '@/components/onboarding-screen';
 import { Brand, Fonts, Spacing } from '@/constants/theme';
-import { saveOnboardingPackPrice } from '@/lib/onboarding';
+import { loadOnboardingSettings, saveOnboardingPackPrice } from '@/lib/onboarding';
+import { useSettingsEditor } from '@/lib/settings-editor';
 
 const PRESETS = [280, 340, 420] as const;
 const PRICE_STEP = 10;
@@ -16,12 +16,26 @@ const DEFAULT_PRICE = 340;
 const SAVINGS_DAYS = 30;
 
 export default function PackScreen() {
-  const router = useRouter();
+  const { isEditing, ctaLabel, finish } = useSettingsEditor();
   const [draft, setDraft] = useState(String(DEFAULT_PRICE));
   const price = parsePrice(draft);
   const savings = price * SAVINGS_DAYS;
   const formattedPrice = formatRupees(price);
   const formattedSavings = formatRupees(savings);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    loadOnboardingSettings().then((saved) => {
+      if (!cancelled && saved.packPrice) {
+        setDraft(String(saved.packPrice));
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const reminder = useMemo(
     () =>
@@ -33,11 +47,11 @@ export default function PackScreen() {
     <OnboardingScreen
       footer={
         <OnboardingCta
-          label="Continue"
+          label={ctaLabel}
           disabled={price < MIN_PRICE}
           onPress={() => {
             void saveOnboardingPackPrice(price);
-            router.push('/onboarding/daily');
+            finish('/onboarding/daily');
           }}
         />
       }>
@@ -46,7 +60,7 @@ export default function PackScreen() {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
-        <OnboardingHeader step={3} />
+        <OnboardingHeader step={3} editing={isEditing} />
 
         <View style={styles.hero}>
           <View style={styles.iconWell}>

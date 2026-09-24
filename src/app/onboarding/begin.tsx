@@ -1,5 +1,4 @@
-import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { OnboardingCta } from '@/components/onboarding-cta';
@@ -13,20 +12,23 @@ import {
   formatMonthYear,
   formatScheduledDay,
   formatWeekdayShort,
+  fromDateKey,
   isSameLocalDay,
   startOfLocalDay,
   toDateKey,
 } from '@/lib/date-key';
 import {
   saveOnboardingStart,
+  loadOnboardingSettings,
   type OnboardingStartMode,
 } from '@/lib/onboarding';
+import { useSettingsEditor } from '@/lib/settings-editor';
 
 const WEEK_LENGTH = 5;
 const DEFAULT_OFFSET_DAYS = 3;
 
 export default function BeginScreen() {
-  const router = useRouter();
+  const { isEditing, ctaLabel, finish } = useSettingsEditor();
   const today = useMemo(() => startOfLocalDay(new Date()), []);
   const weekDays = useMemo(
     () => Array.from({ length: WEEK_LENGTH }, (_, index) => addDays(today, index + 1)),
@@ -36,21 +38,46 @@ export default function BeginScreen() {
   const [mode, setMode] = useState<OnboardingStartMode>('today');
   const [chosenDate, setChosenDate] = useState(() => addDays(today, DEFAULT_OFFSET_DAYS));
 
+  useEffect(() => {
+    let cancelled = false;
+
+    loadOnboardingSettings().then((saved) => {
+      if (cancelled || !saved.start) {
+        return;
+      }
+
+      const savedDate = fromDateKey(saved.start.dateKey);
+      setMode(saved.start.mode);
+      setChosenDate(isSameLocalDay(savedDate, today) ? addDays(today, DEFAULT_OFFSET_DAYS) : savedDate);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [today]);
+
   const selectedDate = mode === 'today' ? today : chosenDate;
   const quietDays = daysBetween(today, selectedDate);
   const monthLabel = formatMonthYear(chosenDate);
+  const visibleDays = useMemo(() => {
+    if (weekDays.some((date) => isSameLocalDay(date, chosenDate))) {
+      return weekDays;
+    }
+
+    return [chosenDate, ...weekDays].slice(0, WEEK_LENGTH);
+  }, [chosenDate, weekDays]);
 
   return (
     <OnboardingScreen
       footer={
         <OnboardingCta
-          label="Continue"
+          label={ctaLabel}
           onPress={() => {
             void saveOnboardingStart({
               mode,
               dateKey: toDateKey(selectedDate),
             });
-            router.push('/onboarding/pack');
+            finish('/onboarding/pack');
           }}
         />
       }>
@@ -58,7 +85,7 @@ export default function BeginScreen() {
         style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}>
-        <OnboardingHeader step={2} />
+        <OnboardingHeader step={2} editing={isEditing} />
 
         <Text style={styles.title}>When do you want to begin?</Text>
         <Text style={styles.subtitle}>
@@ -93,7 +120,7 @@ export default function BeginScreen() {
             </View>
 
             <View style={styles.weekRow}>
-              {weekDays.map((date) => {
+              {visibleDays.map((date) => {
                 const selected = isSameLocalDay(date, chosenDate);
 
                 return (

@@ -1,12 +1,12 @@
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { OnboardingCta } from '@/components/onboarding-cta';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingScreen } from '@/components/onboarding-screen';
 import { Brand, Fonts, Spacing } from '@/constants/theme';
-import { saveOnboardingPackSize } from '@/lib/onboarding';
+import { loadOnboardingSettings, saveOnboardingPackSize } from '@/lib/onboarding';
+import { useSettingsEditor } from '@/lib/settings-editor';
 
 const DEFAULT_SIZE = 20;
 const MIN_SIZE = 5;
@@ -18,21 +18,35 @@ const PRESETS = [
 ] as const;
 
 export default function PackSizeScreen() {
-  const router = useRouter();
+  const { isEditing, ctaLabel, finish } = useSettingsEditor();
   const [size, setSize] = useState(DEFAULT_SIZE);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    loadOnboardingSettings().then((saved) => {
+      if (!cancelled && saved.packSize) {
+        setSize(saved.packSize);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <OnboardingScreen
       footer={
         <OnboardingCta
-          label="Continue"
+          label={ctaLabel}
           onPress={() => {
             void saveOnboardingPackSize(size);
-            router.push('/onboarding/reasons');
+            finish('/onboarding/reasons');
           }}
         />
       }>
-      <OnboardingHeader step={6} />
+      <OnboardingHeader step={6} editing={isEditing} />
 
       <View style={styles.body}>
         <View style={styles.hero}>

@@ -9,6 +9,7 @@ const PACK_SIZE_KEY = 'onboarding-pack-size';
 const REASONS_KEY = 'onboarding-reasons';
 const ATTEMPT_KEY = 'onboarding-attempt';
 const COMPLETE_KEY = 'onboarding-complete';
+const CURRENCY_KEY = 'onboarding-currency';
 
 export const ONBOARDING_STEPS = 8;
 
@@ -89,9 +90,30 @@ export async function saveOnboardingReasons(plan: OnboardingReasons): Promise<vo
 
 export type OnboardingAttempt = 'first' | 'tried-before' | 'prefer-not';
 
+export type OnboardingCurrency = 'INR' | 'USD' | 'EUR' | 'GBP';
+
+export const CURRENCY_OPTIONS: {
+  code: OnboardingCurrency;
+  symbol: string;
+  label: string;
+}[] = [
+  { code: 'INR', symbol: '₹', label: 'INR (₹)' },
+  { code: 'USD', symbol: '$', label: 'USD ($)' },
+  { code: 'EUR', symbol: '€', label: 'EUR (€)' },
+  { code: 'GBP', symbol: '£', label: 'GBP (£)' },
+];
+
 export async function saveOnboardingAttempt(attempt: OnboardingAttempt): Promise<void> {
   try {
     await AsyncStorage.setItem(ATTEMPT_KEY, attempt);
+  } catch {
+    // Keep the in-memory selection even if persistence fails.
+  }
+}
+
+export async function saveOnboardingCurrency(currency: OnboardingCurrency): Promise<void> {
+  try {
+    await AsyncStorage.setItem(CURRENCY_KEY, currency);
   } catch {
     // Keep the in-memory selection even if persistence fails.
   }
@@ -125,6 +147,7 @@ export async function resetOnboardingJourney(): Promise<void> {
       REASONS_KEY,
       ATTEMPT_KEY,
       COMPLETE_KEY,
+      CURRENCY_KEY,
     ]);
   } catch {
     // Continue the reset even if persistence fails.
@@ -152,6 +175,7 @@ export type OnboardingSettings = {
   packSize: number | null;
   triggers: OnboardingTriggers | null;
   reasons: OnboardingReasons | null;
+  currency: OnboardingCurrency;
 };
 
 export async function loadOnboardingJourney(): Promise<OnboardingJourney> {
@@ -181,7 +205,7 @@ export async function loadOnboardingJourney(): Promise<OnboardingJourney> {
 
 export async function loadOnboardingSettings(): Promise<OnboardingSettings> {
   try {
-    const [goal, startRaw, dailyRaw, packPriceRaw, packSizeRaw, triggersRaw, reasonsRaw] =
+    const [goal, startRaw, dailyRaw, packPriceRaw, packSizeRaw, triggersRaw, reasonsRaw, currencyRaw] =
       await Promise.all([
         AsyncStorage.getItem(GOAL_KEY),
         AsyncStorage.getItem(START_KEY),
@@ -190,6 +214,7 @@ export async function loadOnboardingSettings(): Promise<OnboardingSettings> {
         AsyncStorage.getItem(PACK_SIZE_KEY),
         AsyncStorage.getItem(TRIGGERS_KEY),
         AsyncStorage.getItem(REASONS_KEY),
+        AsyncStorage.getItem(CURRENCY_KEY),
       ]);
 
     return {
@@ -200,6 +225,7 @@ export async function loadOnboardingSettings(): Promise<OnboardingSettings> {
       packSize: parseCount(packSizeRaw),
       triggers: parseJson<OnboardingTriggers>(triggersRaw),
       reasons: parseJson<OnboardingReasons>(reasonsRaw),
+      currency: parseCurrency(currencyRaw),
     };
   } catch {
     return {
@@ -210,6 +236,7 @@ export async function loadOnboardingSettings(): Promise<OnboardingSettings> {
       packSize: null,
       triggers: null,
       reasons: null,
+      currency: 'INR',
     };
   }
 }
@@ -224,6 +251,19 @@ function parseStart(raw: string | null): OnboardingStartPlan | null {
   } catch {
     return null;
   }
+}
+
+function parseCurrency(raw: string | null): OnboardingCurrency {
+  return raw === 'USD' || raw === 'EUR' || raw === 'GBP' ? raw : 'INR';
+}
+
+export function currencyLabel(currency: OnboardingCurrency | null | undefined): string {
+  return CURRENCY_OPTIONS.find((option) => option.code === (currency ?? 'INR'))?.label ?? 'INR (₹)';
+}
+
+export function formatMoney(amount: number, currency: OnboardingCurrency | null | undefined): string {
+  const symbol = CURRENCY_OPTIONS.find((option) => option.code === (currency ?? 'INR'))?.symbol ?? '₹';
+  return `${symbol}${amount.toLocaleString('en-IN')}`;
 }
 
 function parseCount(raw: string | null): number | null {

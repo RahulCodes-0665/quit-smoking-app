@@ -1,5 +1,4 @@
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { OnboardingCta } from '@/components/onboarding-cta';
@@ -7,7 +6,8 @@ import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingScreen } from '@/components/onboarding-screen';
 import { SproutIcon } from '@/components/sprout-icon';
 import { Brand, Fonts, Spacing } from '@/constants/theme';
-import { saveOnboardingReasons } from '@/lib/onboarding';
+import { loadOnboardingSettings, saveOnboardingReasons } from '@/lib/onboarding';
+import { useSettingsEditor } from '@/lib/settings-editor';
 
 const REASONS = [
   { id: 'health', label: 'Health', icon: 'health' },
@@ -22,9 +22,26 @@ const REASONS = [
 type ReasonIcon = (typeof REASONS)[number]['icon'];
 
 export default function ReasonsScreen() {
-  const router = useRouter();
+  const { isEditing, ctaLabel, finish } = useSettingsEditor();
   const [selected, setSelected] = useState<string[]>([]);
   const [note, setNote] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    loadOnboardingSettings().then((saved) => {
+      if (cancelled || !saved.reasons) {
+        return;
+      }
+
+      setSelected(saved.reasons.selected);
+      setNote(saved.reasons.note);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function toggle(id: string) {
     setSelected((current) =>
@@ -36,13 +53,13 @@ export default function ReasonsScreen() {
     <OnboardingScreen
       footer={
         <OnboardingCta
-          label="Continue"
+          label={ctaLabel}
           onPress={() => {
             void saveOnboardingReasons({
               selected,
               note: note.trim(),
             });
-            router.push('/onboarding/attempt');
+            finish('/onboarding/attempt');
           }}
         />
       }>
@@ -51,7 +68,7 @@ export default function ReasonsScreen() {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
-        <OnboardingHeader step={7} />
+        <OnboardingHeader step={7} editing={isEditing} />
 
         <Text style={styles.title}>What are you quitting for?</Text>
         <Text style={styles.subtitle}>Choose what matters most to your journey.</Text>

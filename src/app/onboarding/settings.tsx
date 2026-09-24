@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { JourneyTabBar } from '@/components/journey-tab-bar';
 import { Brand, Spacing } from '@/constants/theme';
 import { fromDateKey } from '@/lib/date-key';
-import { loadOnboardingSettings, type OnboardingSettings } from '@/lib/onboarding';
+import { currencyLabel, formatMoney, loadOnboardingSettings, type OnboardingSettings } from '@/lib/onboarding';
 import { useOnboardingSession } from '@/lib/onboarding-session';
 
 const TRIGGER_LABELS: Record<string, string> = {
@@ -52,15 +52,66 @@ export default function SettingsScreen() {
     }, []),
   );
 
+  const triggerValue = triggerLabel(settings);
+  const reasonValue = reasonLabel(settings);
+
   const rows = [
-    { label: 'Goal', value: goalLabel(settings?.goal) },
-    { label: 'Start or quit date', value: startLabel(settings?.start?.dateKey) },
-    { label: 'Cigarettes per day', value: String(settings?.dailyCigarettes ?? 10) },
-    { label: 'Pack price', value: formatRupees(settings?.packPrice ?? 340) },
-    { label: 'Cigarettes per pack', value: String(settings?.packSize ?? 20) },
-    { label: 'Currency', value: 'INR (₹)' },
-    { label: 'Smoking triggers', value: triggerLabel(settings) },
-    { label: 'Personal motivation', value: reasonLabel(settings) },
+    {
+      key: 'goal',
+      label: 'Goal',
+      value: goalLabel(settings?.goal),
+      href: '/onboarding/goal',
+      empty: false,
+    },
+    {
+      key: 'start',
+      label: 'Start or quit date',
+      value: startLabel(settings?.start?.dateKey),
+      href: '/onboarding/begin',
+      empty: false,
+    },
+    {
+      key: 'daily',
+      label: 'Cigarettes per day',
+      value: String(settings?.dailyCigarettes ?? 10),
+      href: '/onboarding/daily',
+      empty: false,
+    },
+    {
+      key: 'price',
+      label: 'Pack price',
+      value: formatMoney(settings?.packPrice ?? 340, settings?.currency),
+      href: '/onboarding/pack',
+      empty: false,
+    },
+    {
+      key: 'pack-size',
+      label: 'Cigarettes per pack',
+      value: String(settings?.packSize ?? 20),
+      href: '/onboarding/pack-size',
+      empty: false,
+    },
+    {
+      key: 'currency',
+      label: 'Currency',
+      value: currencyLabel(settings?.currency),
+      href: '/onboarding/currency',
+      empty: false,
+    },
+    {
+      key: 'triggers',
+      label: 'Smoking triggers',
+      value: triggerValue,
+      href: '/onboarding/triggers',
+      empty: triggerValue === 'Add triggers',
+    },
+    {
+      key: 'reasons',
+      label: 'Personal motivation',
+      value: reasonValue,
+      href: '/onboarding/reasons',
+      empty: reasonValue === 'Add a reason',
+    },
   ];
 
   return (
@@ -85,17 +136,23 @@ export default function SettingsScreen() {
 
           <View style={styles.card}>
             {rows.map((row, index) => (
-              <View key={row.label}>
+              <View key={row.key}>
                 {index > 0 ? <View style={styles.divider} /> : null}
-                <View style={styles.row}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`${row.empty ? 'Add' : 'Edit'} ${row.label}`}
+                  onPress={() => router.push(`${row.href}?from=settings`)}
+                  style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
                   <Text style={styles.rowLabel}>{row.label}</Text>
                   <View style={styles.rowValueWrap}>
-                    <Text style={styles.rowValue} numberOfLines={1}>
+                    <Text
+                      style={[styles.rowValue, row.empty && styles.rowValueEmpty]}
+                      numberOfLines={1}>
                       {row.value}
                     </Text>
                     <Text style={styles.chevron}>›</Text>
                   </View>
-                </View>
+                </Pressable>
               </View>
             ))}
           </View>
@@ -194,10 +251,6 @@ function joinLabels(labels: string[], empty: string): string {
   return labels.join(', ');
 }
 
-function formatRupees(amount: number): string {
-  return `₹${amount.toLocaleString('en-IN')}`;
-}
-
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
@@ -263,6 +316,10 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     fontWeight: 400,
     color: Brand.muted,
+  },
+  rowValueEmpty: {
+    color: Brand.gold,
+    fontWeight: 600,
   },
   chevron: {
     fontSize: 20,

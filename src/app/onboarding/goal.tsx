@@ -1,12 +1,12 @@
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { OnboardingCta } from '@/components/onboarding-cta';
 import { OnboardingHeader } from '@/components/onboarding-header';
 import { OnboardingScreen } from '@/components/onboarding-screen';
 import { Brand, Fonts, Spacing } from '@/constants/theme';
-import { saveOnboardingGoal, type OnboardingGoal } from '@/lib/onboarding';
+import { loadOnboardingSettings, saveOnboardingGoal, type OnboardingGoal } from '@/lib/onboarding';
+import { useSettingsEditor } from '@/lib/settings-editor';
 
 const OPTIONS: {
   value: OnboardingGoal;
@@ -29,21 +29,35 @@ const OPTIONS: {
 ];
 
 export default function GoalScreen() {
-  const router = useRouter();
+  const { isEditing, ctaLabel, finish } = useSettingsEditor();
   const [goal, setGoal] = useState<OnboardingGoal>('quit-completely');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    loadOnboardingSettings().then((saved) => {
+      if (!cancelled && saved.goal) {
+        setGoal(saved.goal);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <OnboardingScreen
       footer={
         <OnboardingCta
-          label="Continue"
+          label={ctaLabel}
           onPress={() => {
             void saveOnboardingGoal(goal);
-            router.push('/onboarding/begin');
+            finish('/onboarding/begin');
           }}
         />
       }>
-      <OnboardingHeader step={1} />
+      <OnboardingHeader step={1} editing={isEditing} />
 
       <Text style={styles.title}>What is your goal?</Text>
       <Text style={styles.subtitle}>
